@@ -1,226 +1,304 @@
+package OrderSystem;
+
+// Basic imports
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.sql.*;
 
-public class BMICalculator extends JFrame {
+// Database imports
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
-    // UI Components without access modifiers
-    JLabel lblName, lblStudentID, lblGender, lblClass, lblWeight, lblHeight;
-    JTextField txtName, txtStudentID, txtWeight, txtHeight;
-    JTextArea resultArea;
-    JComboBox<String> classCombo;
-    JRadioButton maleButton, femaleButton;
-    ButtonGroup genderGroup;
-    JButton btnAdd, btnUpdate, btnDelete, btnClear;
-
-    // Database connection
-    Connection conn;
-
+public class OrderSystem extends JFrame implements ActionListener {
+    // Components
+    JLabel lblTitle, lblOrderID, lblCustomerName, lblProduct, lblQuantity, lblPrice, lblData;
+    JTextField txtOrderID, txtCustomerName, txtQuantity, txtPrice;
+    JComboBox<String> productComboBox;
+    JButton btnAdd, btnClear, btnDisplay, btnUpdate, btnDelete;
+    JTextArea orderRecords;
+    
     // Constructor
-    public BMICalculator() {
-        // Set up JFrame
-        setTitle("BMI Calculator");
+    public OrderSystem() {
+        // Title with color
+        lblTitle = new JLabel(":: Order System ::");
+        lblTitle.setFont(new Font("Arial", Font.BOLD, 20));
+        lblTitle.setForeground(Color.BLUE); // Set the title color to blue
+
+        // Labels
+        lblOrderID = new JLabel("Order ID: ");
+        lblCustomerName = new JLabel("Customer Name: ");
+        lblProduct = new JLabel("Product: ");
+        lblQuantity = new JLabel("Quantity: ");
+        lblPrice = new JLabel("Price: ");
+
+        // Text Fields
+        txtOrderID = new JTextField(20);
+        txtCustomerName = new JTextField(20);
+        txtQuantity = new JTextField(20);
+        txtPrice = new JTextField(20);
+
+        // Product ComboBox
+        String[] products = {"Select Product", "Laptop", "Phone", "Headphones", "Tablet"};
+        productComboBox = new JComboBox<>(products);
+
+        // Buttons
+        btnAdd = new JButton("Add");
+        btnClear = new JButton("Clear");
+        btnDisplay = new JButton("Display");
+        btnUpdate = new JButton("Update");
+        btnDelete = new JButton("Delete");
+
+        // Text Area for Order Records
+        lblData = new JLabel("Order Data : ");
+        orderRecords = new JTextArea(10, 40);
+        orderRecords.setEditable(false);
+        JScrollPane scrollPane = new JScrollPane(orderRecords);
+
+        // Set layout to null
         setLayout(null);
-        setSize(400, 500);
+
+        // Add components to the frame
+        add(lblTitle);
+        add(lblOrderID);
+        add(txtOrderID);
+        add(lblCustomerName);
+        add(txtCustomerName);
+        add(lblProduct);
+        add(productComboBox);
+        add(lblQuantity);
+        add(txtQuantity);
+        add(lblPrice);
+        add(txtPrice);
+        add(btnAdd);
+        add(btnClear);
+        add(btnDisplay);
+        add(btnUpdate);
+        add(btnDelete);
+        add(lblData);
+        add(scrollPane);
+
+        // Set bounds for components
+        lblTitle.setBounds(20, 20, 350, 30);
+        lblOrderID.setBounds(20, 70, 100, 30);
+        txtOrderID.setBounds(150, 70, 200, 30);
+        lblCustomerName.setBounds(20, 110, 120, 30);
+        txtCustomerName.setBounds(150, 110, 200, 30);
+        lblProduct.setBounds(20, 150, 100, 30);
+        productComboBox.setBounds(150, 150, 200, 30);
+        lblQuantity.setBounds(20, 190, 100, 30);
+        txtQuantity.setBounds(150, 190, 200, 30);
+        lblPrice.setBounds(20, 230, 100, 30);
+        txtPrice.setBounds(150, 230, 200, 30);
+        btnAdd.setBounds(20, 270, 80, 30);
+        btnClear.setBounds(120, 270, 80, 30);
+        btnDisplay.setBounds(220, 270, 100, 30);
+        btnUpdate.setBounds(330, 270, 100, 30);
+        btnDelete.setBounds(440, 270, 100, 30);
+        lblData.setBounds(20, 310, 120, 30);
+        scrollPane.setBounds(150, 310, 300, 150);
+
+        // Action listeners for buttons
+        btnAdd.addActionListener(this);
+        btnClear.addActionListener(this);
+        btnDisplay.addActionListener(this);
+        btnUpdate.addActionListener(this);
+        btnDelete.addActionListener(this);
+
+        // Frame settings
+        setTitle("Order System");
+        setSize(600, 550);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-        // Initialize components
-        initializeComponents();
-
-        // Set up database connection
-        connectToDatabase();
-
-        // Add action listeners
-        btnAdd.addActionListener(e -> handleAddRecord());
-        btnUpdate.addActionListener(e -> handleUpdateRecord());
-        btnDelete.addActionListener(e -> handleDeleteRecord());
-        btnClear.addActionListener(e -> clearFields());
-
         setVisible(true);
     }
 
-    // Initialize UI components and their layout
-    private void initializeComponents() {
-        lblName = new JLabel("Name:");
-        lblStudentID = new JLabel("Student ID:");
-        lblGender = new JLabel("Gender:");
-        lblClass = new JLabel("Class:");
-        lblWeight = new JLabel("Weight (kg):");
-        lblHeight = new JLabel("Height (m):");
-
-        txtName = new JTextField();
-        txtStudentID = new JTextField();
-        txtWeight = new JTextField();
-        txtHeight = new JTextField();
-
-        maleButton = new JRadioButton("Male");
-        femaleButton = new JRadioButton("Female");
-        genderGroup = new ButtonGroup();
-        genderGroup.add(maleButton);
-        genderGroup.add(femaleButton);
-
-        classCombo = new JComboBox<>(new String[] {"Please select class", "A", "B", "C", "D"});
-        resultArea = new JTextArea();
-        resultArea.setEditable(false);
-
-        btnAdd = new JButton("Add");
-        btnUpdate = new JButton("Update");
-        btnDelete = new JButton("Delete");
-        btnClear = new JButton("Clear");
-
-        // Set bounds for components
-        lblName.setBounds(30, 30, 100, 30);
-        txtName.setBounds(150, 30, 200, 30);
-
-        lblStudentID.setBounds(30, 70, 100, 30);
-        txtStudentID.setBounds(150, 70, 200, 30);
-
-        lblGender.setBounds(30, 110, 100, 30);
-        maleButton.setBounds(150, 110, 60, 30);
-        femaleButton.setBounds(220, 110, 80, 30);
-
-        lblClass.setBounds(30, 150, 100, 30);
-        classCombo.setBounds(150, 150, 200, 30);
-
-        lblWeight.setBounds(30, 190, 100, 30);
-        txtWeight.setBounds(150, 190, 200, 30);
-
-        lblHeight.setBounds(30, 230, 100, 30);
-        txtHeight.setBounds(150, 230, 200, 30);
-
-        btnAdd.setBounds(30, 270, 80, 30);
-        btnUpdate.setBounds(120, 270, 80, 30);
-        btnDelete.setBounds(210, 270, 80, 30);
-        btnClear.setBounds(300, 270, 80, 30);
-
-        resultArea.setBounds(30, 310, 350, 100);
-
-        // Add components to the frame
-        add(lblName);
-        add(txtName);
-        add(lblStudentID);
-        add(txtStudentID);
-        add(lblGender);
-        add(maleButton);
-        add(femaleButton);
-        add(lblClass);
-        add(classCombo);
-        add(lblWeight);
-        add(txtWeight);
-        add(lblHeight);
-        add(txtHeight);
-        add(btnAdd);
-        add(btnUpdate);
-        add(btnDelete);
-        add(btnClear);
-        add(resultArea);
-    }
-
-    // Connect to the database
-    private void connectToDatabase() {
-        try {
-            conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/your_database", "root", "password");
-        } catch (SQLException e) {
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Error connecting to the database.");
+    // Action performed when buttons are clicked
+    public void actionPerformed(ActionEvent e) {
+        if (e.getSource() == btnAdd) {
+            handleAddOrder();
+        } else if (e.getSource() == btnClear) {
+            handleClear();
+        } else if (e.getSource() == btnDisplay) {
+            loadOrderRecords();
+        } else if (e.getSource() == btnUpdate) {
+            handleUpdateOrder();
+        } else if (e.getSource() == btnDelete) {
+            handleDeleteOrder();
         }
     }
 
-    // Handle add record button action
-    private void handleAddRecord() {
-        if (validateFields()) {
-            String name = txtName.getText();
-            String studentID = txtStudentID.getText();
-            String gender = maleButton.isSelected() ? "Male" : "Female";
-            String studentClass = (String) classCombo.getSelectedItem();
-            double weight = Double.parseDouble(txtWeight.getText());
-            double height = Double.parseDouble(txtHeight.getText());
-            double bmi = calculateBMI(weight, height);
+    // Add order to database and display it
+    private void handleAddOrder() {
+        String orderID = txtOrderID.getText();
+        String customerName = txtCustomerName.getText();
+        String product = (String) productComboBox.getSelectedItem();
+        String quantity = txtQuantity.getText();
+        String price = txtPrice.getText();
 
-            // Save to database
-            executeDatabaseOperation("INSERT INTO bmi_records (student_id, name, gender, class, weight, height, bmi) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    studentID, name, gender, studentClass, weight, height, bmi);
-
-            resultArea.setText("BMI: " + bmi);
+        // Validation for empty fields
+        if (orderID.isEmpty() || customerName.isEmpty() || product.equals("Select Product") ||
+            quantity.isEmpty() || price.isEmpty()) {
+            showError("Please fill in all fields correctly.");
+            return;
         }
-    }
 
-    // Handle update record button action
-    private void handleUpdateRecord() {
-        if (validateFields()) {
-            String name = txtName.getText();
-            String studentID = txtStudentID.getText();
-            String gender = maleButton.isSelected() ? "Male" : "Female";
-            String studentClass = (String) classCombo.getSelectedItem();
-            double weight = Double.parseDouble(txtWeight.getText());
-            double height = Double.parseDouble(txtHeight.getText());
-            double bmi = calculateBMI(weight, height);
+        // Database connection
+        String url = "jdbc:mysql://localhost:3306/order_db";  // Database connection URL
+        String user = "root";
+        String password = "";
 
-            // Update database
-            executeDatabaseOperation("UPDATE bmi_records SET name = ?, gender = ?, class = ?, weight = ?, height = ?, bmi = ? WHERE student_id = ?",
-                    name, gender, studentClass, weight, height, bmi, studentID);
-
-            resultArea.setText("BMI: " + bmi);
-        }
-    }
-
-    // Handle delete record button action
-    private void handleDeleteRecord() {
-        String studentID = txtStudentID.getText();
-        if (!studentID.isEmpty()) {
-            executeDatabaseOperation("DELETE FROM bmi_records WHERE student_id = ?", studentID);
-            JOptionPane.showMessageDialog(this, "Record deleted successfully.");
-        } else {
-            JOptionPane.showMessageDialog(this, "Please enter a valid Student ID.");
-        }
-    }
-
-    // Validate input fields
-    private boolean validateFields() {
-        if (txtName.getText().isEmpty() || txtStudentID.getText().isEmpty() || txtWeight.getText().isEmpty() || txtHeight.getText().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please fill out all fields.");
-            return false;
-        }
-        if (classCombo.getSelectedIndex() == 0) {
-            JOptionPane.showMessageDialog(this, "Please select a class.");
-            return false;
-        }
-        return true;
-    }
-
-    // Calculate BMI
-    private double calculateBMI(double weight, double height) {
-        return weight / (height * height);
-    }
-
-    // Execute database operations (add, update, delete)
-    private void executeDatabaseOperation(String query, Object... params) {
-        try (PreparedStatement stmt = conn.prepareStatement(query)) {
-            for (int i = 0; i < params.length; i++) {
-                stmt.setObject(i + 1, params[i]);
+        try (Connection conn = DriverManager.getConnection(url, user, password)) {
+            String sql = "INSERT INTO orders (order_id, customer_name, product, quantity, price) VALUES (?, ?, ?, ?, ?)";
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, orderID);
+                pstmt.setString(2, customerName);
+                pstmt.setString(3, product);
+                pstmt.setString(4, quantity);
+                pstmt.setString(5, price);
+                pstmt.executeUpdate();
             }
-            stmt.executeUpdate();
-            JOptionPane.showMessageDialog(this, "Operation successful.");
-        } catch (SQLException e) {
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Database operation failed.");
+
+            // Display the new record in the JTextArea
+            orderRecords.append("Order added:\n" +
+                    "Order ID: " + orderID +
+                    "\nCustomer Name: " + customerName +
+                    "\nProduct: " + product +
+                    "\nQuantity: " + quantity +
+                    "\nPrice: " + price + "\n\n");
+
+            // Show success confirmation
+            JOptionPane.showMessageDialog(this, "Order added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+        } catch (SQLException ex) {
+            showError("Database error: " + ex.getMessage());
         }
     }
 
-    // Clear fields
-    private void clearFields() {
-        txtName.setText("");
-        txtStudentID.setText("");
-        txtWeight.setText("");
-        txtHeight.setText("");
-        genderGroup.clearSelection();
-        classCombo.setSelectedIndex(0);
-        resultArea.setText("");
+    // Clear input fields
+    private void handleClear() {
+        txtOrderID.setText("");
+        txtCustomerName.setText("");
+        productComboBox.setSelectedIndex(0);  // Reset product dropdown
+        txtQuantity.setText("");
+        txtPrice.setText("");
+    }
+
+    // Load order records
+    private void loadOrderRecords() {
+        // Clear current records
+        orderRecords.setText("");
+
+        // Database connection parameters
+        String url = "jdbc:mysql://localhost:3306/order_db";  // Database connection URL
+        String user = "root";
+        String password = "";
+
+        // Query to retrieve order records
+        String sql = "SELECT order_id, customer_name, product, quantity, price FROM orders";
+
+        try (Connection conn = DriverManager.getConnection(url, user, password);
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            // Append all records to the JTextArea
+            while (rs.next()) {
+                String orderID = rs.getString("order_id");
+                String customerName = rs.getString("customer_name");
+                String product = rs.getString("product");
+                String quantity = rs.getString("quantity");
+                String price = rs.getString("price");
+                orderRecords.append("Order ID: " + orderID + "\nCustomer Name: " + customerName + 
+                                    "\nProduct: " + product + "\nQuantity: " + quantity + 
+                                    "\nPrice: " + price + "\n\n");
+            }
+        } catch (SQLException ex) {
+            showError("Database error: " + ex.getMessage());
+        }
+    }
+
+    // Update order
+    private void handleUpdateOrder() {
+        String orderID = txtOrderID.getText();
+        String customerName = txtCustomerName.getText();
+        String product = (String) productComboBox.getSelectedItem();
+        String quantity = txtQuantity.getText();
+        String price = txtPrice.getText();
+
+        if (orderID.isEmpty() || customerName.isEmpty() || product.equals("Select Product") ||
+            quantity.isEmpty() || price.isEmpty()) {
+            showError("Please fill in all fields correctly.");
+            return;
+        }
+
+        // Database connection
+        String url = "jdbc:mysql://localhost:3306/order_db";
+        String user = "root";
+        String password = "";
+
+        try (Connection conn = DriverManager.getConnection(url, user, password)) {
+            String sql = "UPDATE orders SET customer_name = ?, product = ?, quantity = ?, price = ? WHERE order_id = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, customerName);
+                pstmt.setString(2, product);
+                pstmt.setString(3, quantity);
+                pstmt.setString(4, price);
+                pstmt.setString(5, orderID);
+                int rowsUpdated = pstmt.executeUpdate();
+
+                if (rowsUpdated > 0) {
+                    JOptionPane.showMessageDialog(this, "Order updated successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, "No order found with this Order ID.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        } catch (SQLException ex) {
+            showError("Database error: " + ex.getMessage());
+        }
+    }
+
+    // Delete order
+    private void handleDeleteOrder() {
+        String orderID = txtOrderID.getText();
+
+        if (orderID.isEmpty()) {
+            showError("Please enter a valid Order ID.");
+            return;
+        }
+
+        // Database connection
+        String url = "jdbc:mysql://localhost:3306/order_db";
+        String user = "root";
+        String password = "";
+
+        try (Connection conn = DriverManager.getConnection(url, user, password)) {
+            String sql = "DELETE FROM orders WHERE order_id = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, orderID);
+                int rowsDeleted = pstmt.executeUpdate();
+
+                if (rowsDeleted > 0) {
+                    JOptionPane.showMessageDialog(this, "Order deleted successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, "No order found with this Order ID.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        } catch (SQLException ex) {
+            showError("Database error: " + ex.getMessage());
+        }
+    }
+
+    // Display error message
+    private void showError(String message) {
+        JOptionPane.showMessageDialog(this, message, "Error", JOptionPane.ERROR_MESSAGE);
     }
 
     public static void main(String[] args) {
-        new BMICalculator();
+        new OrderSystem();
     }
 }
+
+// Database: order_db
+// Table: orders
+// Items: order_id, customer_name, product, quantity, price
