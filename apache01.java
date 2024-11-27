@@ -1,12 +1,12 @@
 package StudentAttendanceSystem;
 
-//basic import
+// basic import
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-//databse import
+// database import
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -23,7 +23,7 @@ public class StudentAttendanceSystem extends JFrame implements ActionListener {
     ButtonGroup statusGroup;  // Group for radio buttons
     JComboBox<String> departmentComboBox, semesterComboBox;
 
-    // Constructor
+    // Constructor and labels name to items
     public StudentAttendanceSystem() {
         // Title with color
         lblTitle = new JLabel(":: Student Attendance System ::");
@@ -148,6 +148,7 @@ public class StudentAttendanceSystem extends JFrame implements ActionListener {
         }
     }
 
+    // add attendance
     private void handleAddAttendance() {
         String studentID = txtStudentID.getText();
         String name = txtName.getText();
@@ -155,9 +156,15 @@ public class StudentAttendanceSystem extends JFrame implements ActionListener {
         String department = (String) departmentComboBox.getSelectedItem();
         String semester = (String) semesterComboBox.getSelectedItem();
 
-        // Validation
+        // Validation for empty spaces
         if (studentID.isEmpty() || name.isEmpty() || department.equals("Select Department") || semester.equals("Select Semester")) {
             showError("Please fill in all fields correctly.");
+            return;
+        }
+
+        // Name validation - only letters and spaces allowed
+        if (!name.matches("^[a-zA-Z ]+$")) {
+            showError("Please enter a valid name with only letters and spaces.");
             return;
         }
 
@@ -224,9 +231,9 @@ public class StudentAttendanceSystem extends JFrame implements ActionListener {
                 String status = rs.getString("status");
                 String department = rs.getString("department");
                 String semester = rs.getString("semester");
-                attendanceRecords.append("ID: " + studentID + "\nName: " + name + "\nStatus: " + status +
-                        "\nDepartment: " + department + "\nSemester: " + semester + "\n\n");
+                attendanceRecords.append("ID: " + studentID + "\nName: " + name + "\nStatus: " + status + "\nDepartment: " + department + "\nSemester: " + semester + "\n\n");
             }
+
         } catch (SQLException ex) {
             showError("Database error: " + ex.getMessage());
         }
@@ -244,7 +251,12 @@ public class StudentAttendanceSystem extends JFrame implements ActionListener {
             return;
         }
 
-        // Database connection
+        // Name validation - only letters and spaces allowed
+        if (!name.matches("^[a-zA-Z ]+$")) {
+            showError("Please enter a valid name with only letters and spaces.");
+            return;
+        }
+
         String url = "jdbc:mysql://localhost:3306/attendance_db";
         String user = "root";
         String password = "";
@@ -257,12 +269,12 @@ public class StudentAttendanceSystem extends JFrame implements ActionListener {
                 pstmt.setString(3, department);
                 pstmt.setString(4, semester);
                 pstmt.setString(5, studentID);
-                int rowsUpdated = pstmt.executeUpdate();
 
-                if (rowsUpdated > 0) {
-                    JOptionPane.showMessageDialog(this, "Record updated successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                int updatedRows = pstmt.executeUpdate();
+                if (updatedRows > 0) {
+                    JOptionPane.showMessageDialog(this, "Attendance updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
                 } else {
-                    JOptionPane.showMessageDialog(this, "No record found for this Student ID.", "Error", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "match the student_id to update.", "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         } catch (SQLException ex) {
@@ -274,11 +286,10 @@ public class StudentAttendanceSystem extends JFrame implements ActionListener {
         String studentID = txtStudentID.getText();
 
         if (studentID.isEmpty()) {
-            showError("Please enter a valid Student ID.");
+            showError("Please enter a student ID to delete.");
             return;
         }
 
-        // Database connection
         String url = "jdbc:mysql://localhost:3306/attendance_db";
         String user = "root";
         String password = "";
@@ -287,12 +298,12 @@ public class StudentAttendanceSystem extends JFrame implements ActionListener {
             String sql = "DELETE FROM attendance WHERE student_id = ?";
             try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
                 pstmt.setString(1, studentID);
-                int rowsDeleted = pstmt.executeUpdate();
+                int deletedRows = pstmt.executeUpdate();
 
-                if (rowsDeleted > 0) {
-                    JOptionPane.showMessageDialog(this, "Record deleted successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                if (deletedRows > 0) {
+                    JOptionPane.showMessageDialog(this, "Attendance deleted successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
                 } else {
-                    JOptionPane.showMessageDialog(this, "No record found for this Student ID.", "Error", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "match the student_id record to delete.", "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         } catch (SQLException ex) {
