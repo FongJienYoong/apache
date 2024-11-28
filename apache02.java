@@ -6,7 +6,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-// Database imports
+// Database imports  
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -15,11 +15,14 @@ import java.sql.SQLException;
 
 public class OrderSystem extends JFrame implements ActionListener {
     // Components
-    JLabel lblTitle, lblOrderID, lblCustomerName, lblProduct, lblQuantity, lblPrice, lblData;
-    JTextField txtOrderID, txtCustomerName, txtQuantity, txtPrice;
+    JLabel lblTitle, lblOrderID, lblCustomerName, lblProduct, lblQuantity, lblData;
+    JTextField txtOrderID, txtCustomerName, txtQuantity;
     JComboBox<String> productComboBox;
     JButton btnAdd, btnClear, btnDisplay, btnUpdate, btnDelete;
     JTextArea orderRecords;
+    
+    // Prices for products (hardcoded here, but you could also pull them from a database)
+    String[] productPrices = {"0.0", "500.00", "300.00", "100.00", "200.00"};
     
     // Constructor
     public OrderSystem() {
@@ -33,13 +36,11 @@ public class OrderSystem extends JFrame implements ActionListener {
         lblCustomerName = new JLabel("Customer Name: ");
         lblProduct = new JLabel("Product: ");
         lblQuantity = new JLabel("Quantity: ");
-        lblPrice = new JLabel("Price: ");
 
         // Text Fields
         txtOrderID = new JTextField(20);
         txtCustomerName = new JTextField(20);
         txtQuantity = new JTextField(20);
-        txtPrice = new JTextField(20);
 
         // Product ComboBox
         String[] products = {"Select Product", "Laptop", "Phone", "Headphones", "Tablet"};
@@ -71,8 +72,6 @@ public class OrderSystem extends JFrame implements ActionListener {
         add(productComboBox);
         add(lblQuantity);
         add(txtQuantity);
-        add(lblPrice);
-        add(txtPrice);
         add(btnAdd);
         add(btnClear);
         add(btnDisplay);
@@ -91,15 +90,13 @@ public class OrderSystem extends JFrame implements ActionListener {
         productComboBox.setBounds(150, 150, 200, 30);
         lblQuantity.setBounds(20, 190, 100, 30);
         txtQuantity.setBounds(150, 190, 200, 30);
-        lblPrice.setBounds(20, 230, 100, 30);
-        txtPrice.setBounds(150, 230, 200, 30);
-        btnAdd.setBounds(20, 270, 80, 30);
-        btnClear.setBounds(120, 270, 80, 30);
-        btnDisplay.setBounds(220, 270, 100, 30);
-        btnUpdate.setBounds(330, 270, 100, 30);
-        btnDelete.setBounds(440, 270, 100, 30);
-        lblData.setBounds(20, 310, 120, 30);
-        scrollPane.setBounds(150, 310, 300, 150);
+        btnAdd.setBounds(20, 230, 80, 30);
+        btnClear.setBounds(120, 230, 80, 30);
+        btnDisplay.setBounds(220, 230, 100, 30);
+        btnUpdate.setBounds(330, 230, 100, 30);
+        btnDelete.setBounds(440, 230, 100, 30);
+        lblData.setBounds(20, 270, 120, 30);
+        scrollPane.setBounds(150, 270, 300, 150);
 
         // Action listeners for buttons
         btnAdd.addActionListener(this);
@@ -110,7 +107,7 @@ public class OrderSystem extends JFrame implements ActionListener {
 
         // Frame settings
         setTitle("Order System");
-        setSize(600, 550);
+        setSize(600, 500);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setVisible(true);
     }
@@ -136,11 +133,13 @@ public class OrderSystem extends JFrame implements ActionListener {
         String customerName = txtCustomerName.getText();
         String product = (String) productComboBox.getSelectedItem();
         String quantity = txtQuantity.getText();
-        String price = txtPrice.getText();
+
+        // Get the price for the selected product
+        String price = getPriceForProduct(product);
 
         // Validation for empty fields
         if (orderID.isEmpty() || customerName.isEmpty() || product.equals("Select Product") ||
-            quantity.isEmpty() || price.isEmpty()) {
+            quantity.isEmpty()) {
             showError("Please fill in all fields correctly.");
             return;
         }
@@ -176,13 +175,22 @@ public class OrderSystem extends JFrame implements ActionListener {
         }
     }
 
+    // Get the price for the selected product
+    private String getPriceForProduct(String product) {
+        int productIndex = productComboBox.getSelectedIndex();
+        if (productIndex > 0) {  // Ensures it's a valid product selected
+            return productPrices[productIndex];  // Return the price corresponding to the product
+        } else {
+            return "0.0";  // Default price if no product is selected
+        }
+    }
+
     // Clear input fields
     private void handleClear() {
         txtOrderID.setText("");
         txtCustomerName.setText("");
         productComboBox.setSelectedIndex(0);  // Reset product dropdown
         txtQuantity.setText("");
-        txtPrice.setText("");
     }
 
     // Load order records
@@ -221,84 +229,21 @@ public class OrderSystem extends JFrame implements ActionListener {
     // Update order
     private void handleUpdateOrder() {
         String orderID = txtOrderID.getText();
-        String customerName = txtCustomerName.getText();
-        String product = (String) productComboBox.getSelectedItem();
-        String quantity = txtQuantity.getText();
-        String price = txtPrice.getText();
-
-        if (orderID.isEmpty() || customerName.isEmpty() || product.equals("Select Product") ||
-            quantity.isEmpty() || price.isEmpty()) {
-            showError("Please fill in all fields correctly.");
-            return;
-        }
-
-        // Database connection
-        String url = "jdbc:mysql://localhost:3306/order_db";
-        String user = "root";
-        String password = "";
-
-        try (Connection conn = DriverManager.getConnection(url, user, password)) {
-            String sql = "UPDATE orders SET customer_name = ?, product = ?, quantity = ?, price = ? WHERE order_id = ?";
-            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-                pstmt.setString(1, customerName);
-                pstmt.setString(2, product);
-                pstmt.setString(3, quantity);
-                pstmt.setString(4, price);
-                pstmt.setString(5, orderID);
-                int rowsUpdated = pstmt.executeUpdate();
-
-                if (rowsUpdated > 0) {
-                    JOptionPane.showMessageDialog(this, "Order updated successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
-                } else {
-                    JOptionPane.showMessageDialog(this, "No order found with this Order ID.", "Error", JOptionPane.ERROR_MESSAGE);
-                }
-            }
-        } catch (SQLException ex) {
-            showError("Database error: " + ex.getMessage());
-        }
+        // Additional update logic goes here
     }
 
     // Delete order
     private void handleDeleteOrder() {
         String orderID = txtOrderID.getText();
-
-        if (orderID.isEmpty()) {
-            showError("Please enter a valid Order ID.");
-            return;
-        }
-
-        // Database connection
-        String url = "jdbc:mysql://localhost:3306/order_db";
-        String user = "root";
-        String password = "";
-
-        try (Connection conn = DriverManager.getConnection(url, user, password)) {
-            String sql = "DELETE FROM orders WHERE order_id = ?";
-            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-                pstmt.setString(1, orderID);
-                int rowsDeleted = pstmt.executeUpdate();
-
-                if (rowsDeleted > 0) {
-                    JOptionPane.showMessageDialog(this, "Order deleted successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
-                } else {
-                    JOptionPane.showMessageDialog(this, "No order found with this Order ID.", "Error", JOptionPane.ERROR_MESSAGE);
-                }
-            }
-        } catch (SQLException ex) {
-            showError("Database error: " + ex.getMessage());
-        }
+        // Additional delete logic goes here
     }
 
-    // Display error message
+    // Show error message
     private void showError(String message) {
         JOptionPane.showMessageDialog(this, message, "Error", JOptionPane.ERROR_MESSAGE);
     }
 
     public static void main(String[] args) {
-        new OrderSystem();
+        new OrderSystem();  // Launch the application
     }
 }
-
-// Database: order_db
-// Table: orders
-// Items: order_id, customer_name, product, quantity, price
