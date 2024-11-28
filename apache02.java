@@ -5,13 +5,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-
-// Database imports  
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 
 public class OrderSystem extends JFrame implements ActionListener {
     // Components
@@ -21,7 +15,7 @@ public class OrderSystem extends JFrame implements ActionListener {
     JButton btnAdd, btnClear, btnDisplay, btnUpdate, btnDelete;
     JTextArea orderRecords;
     
-    // Prices for products (hardcoded here, but you could also pull them from a database)
+    // Prices for products (this could be replaced with dynamic pricing from a database)
     String[] productPrices = {"0.0", "500.00", "300.00", "100.00", "200.00"};
     
     // Constructor
@@ -127,7 +121,7 @@ public class OrderSystem extends JFrame implements ActionListener {
         }
     }
 
-    // Add order to database and display it
+    // Add order to the database
     private void handleAddOrder() {
         String orderID = txtOrderID.getText();
         String customerName = txtCustomerName.getText();
@@ -229,21 +223,80 @@ public class OrderSystem extends JFrame implements ActionListener {
     // Update order
     private void handleUpdateOrder() {
         String orderID = txtOrderID.getText();
-        // Additional update logic goes here
+        String customerName = txtCustomerName.getText();
+        String product = (String) productComboBox.getSelectedItem();
+        String quantity = txtQuantity.getText();
+        String price = getPriceForProduct(product);
+
+        if (orderID.isEmpty() || customerName.isEmpty() || product.equals("Select Product") ||
+            quantity.isEmpty()) {
+            showError("Please fill in all fields correctly.");
+            return;
+        }
+
+        // Database connection
+        String url = "jdbc:mysql://localhost:3306/order_db";
+        String user = "root";
+        String password = "";
+
+        try (Connection conn = DriverManager.getConnection(url, user, password)) {
+            String sql = "UPDATE orders SET customer_name = ?, product = ?, quantity = ?, price = ? WHERE order_id = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, customerName);
+                pstmt.setString(2, product);
+                pstmt.setString(3, quantity);
+                pstmt.setString(4, price);
+                pstmt.setString(5, orderID);
+                int rowsUpdated = pstmt.executeUpdate();
+
+                if (rowsUpdated > 0) {
+                    JOptionPane.showMessageDialog(this, "Order updated successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, "No order found with this Order ID.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        } catch (SQLException ex) {
+            showError("Database error: " + ex.getMessage());
+        }
     }
 
     // Delete order
     private void handleDeleteOrder() {
         String orderID = txtOrderID.getText();
-        // Additional delete logic goes here
+
+        if (orderID.isEmpty()) {
+            showError("Please enter a valid Order ID.");
+            return;
+        }
+
+        // Database connection
+        String url = "jdbc:mysql://localhost:3306/order_db";
+        String user = "root";
+        String password = "";
+
+        try (Connection conn = DriverManager.getConnection(url, user, password)) {
+            String sql = "DELETE FROM orders WHERE order_id = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, orderID);
+                int rowsDeleted = pstmt.executeUpdate();
+
+                if (rowsDeleted > 0) {
+                    JOptionPane.showMessageDialog(this, "Order deleted successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, "No order found with this Order ID.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        } catch (SQLException ex) {
+            showError("Database error: " + ex.getMessage());
+        }
     }
 
-    // Show error message
+    // Display error message
     private void showError(String message) {
         JOptionPane.showMessageDialog(this, message, "Error", JOptionPane.ERROR_MESSAGE);
     }
 
     public static void main(String[] args) {
-        new OrderSystem();  // Launch the application
+        new OrderSystem();
     }
 }
